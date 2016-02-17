@@ -1,0 +1,9 @@
+#!/bin/zsh
+
+if [ $1 ]
+  then
+    blender dev1.blend --python code/test1.py
+  else
+    blender dev1.blend --background --python code/test1.py
+fi
+
