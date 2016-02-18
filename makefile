@@ -6,5 +6,5 @@ all:
 	open out/rattan.png
 
 open:
-	blender dev1.blend --python test1.py
+	blender dev1.blend --python test1.py -he
 	open out/rattan.png

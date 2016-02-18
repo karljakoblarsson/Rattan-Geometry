@@ -2,9 +2,10 @@
 # funkar. Klaga inte på att den är sämst, jag vet det redan. :P
 
 import bpy
-import os
+import os, sys
 from mathutils import *
 from math import *
+from random import *
 
 # Convenience Variables:
 C = bpy.context
@@ -16,7 +17,8 @@ def odd(n):
 curvesObj = []
 
 # """"""Trä""""" Material definerat i .blend-filen. (Ett '"' var inte nog)
-material = D.materials.get('YR-material')
+material = D.materials.get('YR-Material')
+texture = D.textures.get('Bamboo-tex')
 
 # Konstanta parametrar
 rows = 40
@@ -39,12 +41,13 @@ for strand in range(rows):
     curve.dimensions = '3D'
     curve.fill_mode = 'FULL'
     curve.bevel_resolution = 5
-    curve.bevel_depth = bevel_depth
+    curve.bevel_depth = bevel_depth * (1.25 - random()*0.5)
 
 
     curvesObj.append(D.objects.new('CurveObj' + str(strand), curve))
     C.scene.objects.link(curvesObj[strand])
 
+    #individ_mat = material.copy()
     curvesObj[strand].data.materials.append(material)
 
 
@@ -58,7 +61,7 @@ for strand in range(rows):
     nurbs.points.add(N-1)
 
     x, y = 0, 0
-    z += d_z
+    z += d_z + (random() * 0.030 - 0.0150)
 
     for n in range(N):
         #x = n/2
@@ -69,21 +72,23 @@ for strand in range(rows):
         nurbs.points[n].co = (x, y, z, weight)
 
 
-vertical_strands = [None]
+# nåt dumt jag gjort i .blend filenNone
+vertical_strands = [None, None]
 
-for n in range(1,N-1):
+for n in range(2, N-1):
     vert = D.curves.new(name='vert_strand' + str(n), type='CURVE')
 
     vert.dimensions = '3D'
     vert.fill_mode = 'FULL'
     vert.bevel_resolution = 5
-    vert.bevel_depth = bevel_depth * vert_bevel_factor
+    vert.bevel_depth = bevel_depth * vert_bevel_factor * (1.15 - random()*0.3)
 
 
     vertical_strands.append(D.objects.new('vert_strandObj' + str(n), vert))
     C.scene.objects.link(vertical_strands[n])
 
-    vertical_strands[n].data.materials.append(material)
+    individ_mat = material.copy()
+    vertical_strands[n].data.materials.append(individ_mat)
 
     nurbs = vert.splines.new('NURBS')
 
@@ -106,7 +111,8 @@ for n in range(1,N-1):
 
 
 # Det här ska se till att bilden sparas i mappen out som ignoreras av git.
-filename = 'rattan.png'
-bpy.data.scenes['Scene'].render.filepath = os.getcwd() + '/out/' + filename
-bpy.ops.render.render(write_still=True)
+if len(sys.argv) == 0:
+    filename = 'rattan.png'
+    bpy.data.scenes['Scene'].render.filepath = os.getcwd() + '/out/' + filename
+    bpy.ops.render.render(write_still=True)
 
