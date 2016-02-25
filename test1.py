@@ -34,6 +34,8 @@ vert_bevel_factor = 1.25
 
 z = 0 # z_0
 
+singleMaterial = False
+
 for strand in range(rows):
 
     curve = D.curves.new(name='strand' + str(strand), type='CURVE')
@@ -41,14 +43,21 @@ for strand in range(rows):
     curve.dimensions = '3D'
     curve.fill_mode = 'FULL'
     curve.bevel_resolution = 5
-    curve.bevel_depth = bevel_depth * (1.25 - random()*0.5)
+    curve.use_uv_as_generated = True
+
+    thickness = bevel_depth * (1.25 - random()*0.5)
+    curve.bevel_depth = thickness
 
 
     curvesObj.append(D.objects.new('CurveObj' + str(strand), curve))
     C.scene.objects.link(curvesObj[strand])
 
-    #individ_mat = material.copy()
-    curvesObj[strand].data.materials.append(material)
+    if singleMaterial:
+        curvesObj[strand].data.materials.append(material)
+    else:
+        individ_mat = material.copy()
+        individ_mat.texture_slots[0].offset.y = random() * 40
+        curvesObj[strand].data.materials.append(individ_mat)
 
 
     nurbs = curve.splines.new('NURBS')
@@ -61,7 +70,8 @@ for strand in range(rows):
     nurbs.points.add(N-1)
 
     x, y = 0, 0
-    z += d_z + (random() * 0.030 - 0.0150)
+    #z += d_z + (random() * 0.030 - 0.0150)
+    z += thickness * 2
 
     for n in range(N):
         #x = n/2
@@ -72,6 +82,9 @@ for strand in range(rows):
         nurbs.points[n].co = (x, y, z, weight)
 
 
+vert_texture = D.textures['Bamboo-tex'].copy()
+vert_texture.use_flip_axis = False
+#material.texture_slots[0] = vert_texture
 # nåt dumt jag gjort i .blend filenNone
 vertical_strands = [None, None]
 
@@ -88,6 +101,7 @@ for n in range(2, N-1):
     C.scene.objects.link(vertical_strands[n])
 
     individ_mat = material.copy()
+    individ_mat.texture_slots[0].offset.y = random() * 40
     vertical_strands[n].data.materials.append(individ_mat)
 
     nurbs = vert.splines.new('NURBS')
@@ -110,9 +124,18 @@ for n in range(2, N-1):
 
 
 
-# Det här ska se till att bilden sparas i mappen out som ignoreras av git.
-if len(sys.argv) == 0:
-    filename = 'rattan.png'
-    bpy.data.scenes['Scene'].render.filepath = os.getcwd() + '/out/' + filename
+# Render the scene and save the result if specified by the makefile using
+# these enviroment variables. You're able to chang the output name using make
+render = os.environ['RENDER']
+if render == '1':
+    outfile = os.environ.get('OUTFILE')
+    if outfile is not None:
+        filename = outfile
+    else:
+        filename = 'out/' + 'rattan.png' # Folder + default name. Should never
+                                         # be called whe using the makefile.
+
+    print(filename)
+    bpy.data.scenes['Scene'].render.filepath = os.getcwd() + '/' + filename
     bpy.ops.render.render(write_still=True)
 

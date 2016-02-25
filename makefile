@@ -1,10 +1,22 @@
-# Simple makefile to reun blender with our testfile and script
+# Simple makefile to run blender with our testfile and script
 #
 
-all:
-	blender dev1.blend --background --python test1.py
-	open out/rattan.png
+FILE=dev3.blend
 
+OUTFOLDER=out/
+OUT=rattan.png
+
+OUTFILE=$(OUTFOLDER)$(OUT)
+export OUTFILE
+
+all: export RENDER=1
+all:
+	blender $(FILE) --background --python test1.py
+	open $(OUTFILE)
+
+open: export RENDER=0
 open:
-	blender dev1.blend --python test1.py -he
-	open out/rattan.png
+	blender $(FILE) --python test1.py
+
+test:
+	echo $(OUTFILE)
