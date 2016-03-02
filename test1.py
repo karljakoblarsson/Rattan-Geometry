@@ -14,6 +14,15 @@ D = bpy.data
 def odd(n):
     return (2*(n%2)) - 1
 
+def curve_settings(c):
+    c.dimensions = '3D'
+    c.fill_mode = 'FULL'
+    c.bevel_resolution = 5
+    c.use_uv_as_generated = True
+    c.bevel_depth = bevel_depth
+
+
+
 curvesObj = []
 
 # """"""Trä""""" Material definerat i .blend-filen. (Ett '"' var inte nog)
@@ -34,7 +43,6 @@ vert_bevel_factor = 1.25
 
 z = 0 # z_0
 
-singleMaterial = False
 cycles = False
 
 
@@ -42,42 +50,20 @@ cycles = False
 
 curve = D.curves.new(name='strand', type='CURVE')
 
-curve.dimensions = '3D'
-curve.fill_mode = 'FULL'
-curve.bevel_resolution = 5
-curve.use_uv_as_generated = True
-
-thickness = bevel_depth * (1.25 - random()*0.5)
-curve.bevel_depth = thickness
-
+curve_settings(curve)
 
 curvesObj.append(D.objects.new('CurveObj', curve))
 C.scene.objects.link(curvesObj[0])
 
-if singleMaterial:
-    curvesObj[0].data.materials.append(material)
-else:
-    individ_mat = material.copy()
-
-    if cycles:
-        individ_mat.node_tree.nodes["Mapping"].rotation.z = random() * 180
-        individ_mat.node_tree.nodes["Mapping.001"].rotation.z = random() * 180
-        individ_mat.node_tree.nodes["Mapping.002"].rotation.z = random() * 180
-        individ_mat.node_tree.nodes["RGB"].color.r += (random() - 0.5) * 0.9
-        individ_mat.node_tree.nodes["RGB"].color.g += (random() - 0.5) * 0.9
-        individ_mat.node_tree.nodes["RGB"].color.b += (random() - 0.5) * 0.9
-    else:
-        individ_mat.texture_slots[0].offset.y = random() * 40
-
-    curvesObj[0].data.materials.append(individ_mat)
-
-
-
-# Funkar inte här. Ser ut somm stryk
-#curve.splines[0].use_endpoint_u = True
+curvesObj[0].data.materials.append(material)
 
 nurbs = curve.splines.new('NURBS')
-count = 0
+
+count = -1
+x = 0
+y = 0
+
+# Glöm inte default vertexen i origo!
 
 for strand in range(rows):
 
@@ -85,25 +71,47 @@ for strand in range(rows):
 
     nurbs.points.add(N)
 
-    y = 0
-    if odd(strand) == 1:
-        x = d_x*20
-    else:
-        x = 0
-    #z += d_z + (random() * 0.030 - 0.0150)
-    z += thickness * 2
-
     for n in range(N):
         count += 1
-        #x = n/2
         y = bend_factor * (odd(strand) * odd(n))
-        #z = strand/4
         if odd(strand) == 1:
             x -= d_x
         else:
             x += d_x
-        #y += d_y
+
         nurbs.points[count].co = (x, y, z, weight)
+
+    ## Slutsnurren
+    #nurbs.points.add(6)
+
+    #x -= odd(strand) * d_x
+    #z += (bevel_depth * 2) / 3
+    #nurbs.points[count + 1].co = (x, y, z, weight)
+
+    #y *= -1
+    #z += (bevel_depth * 2) / 3
+    #nurbs.points[count + 2].co = (x, y, z, weight)
+
+    #x += odd(strand) * d_x
+    #z += (bevel_depth * 2) / 3
+    #nurbs.points[count + 3].co = (x, y, z, weight)
+
+    #y *= -1
+    #z += (bevel_depth * 2) / 3
+    #nurbs.points[count + 4].co = (x, y, z, weight)
+
+    #x -= odd(strand) * d_x
+    #z += (bevel_depth * 2) / 3
+    #nurbs.points[count + 5].co = (x, y, z, weight)
+
+    #y *= -1
+    #z += (bevel_depth * 2) / 3
+    #nurbs.points[count + 6].co = (x, y, z, weight)
+
+    #count += 6
+
+    #x += odd(strand) * d_x
+
 
 
 #vert_texture = D.textures['Bamboo-tex'].copy()
