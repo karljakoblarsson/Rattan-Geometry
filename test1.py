@@ -30,20 +30,19 @@ material = D.materials.get('YR-Material')
 texture = D.textures.get('Bamboo-tex')
 
 # Konstanta parametrar
-rows = 3
+rows = 60
 weight = 0.2
 
 d_x = 0.5
-d_y = 0.3
+d_y = 0.15
 bend_factor = d_y
 d_z = 0.08
 
-bevel_depth = 0.04
+bevel_depth = 0.03
 vert_bevel_factor = 1.25
 
-z = 0 # z_0
 
-cycles = False
+cycles = True
 
 
 ##############################################################################
@@ -61,7 +60,10 @@ nurbs = curve.splines.new('NURBS')
 
 count = -1
 x = 0
-y = 0
+y = bend_factor
+z = 0 # z_0
+
+# Re-meshing - Frame fields
 
 # Glöm inte default vertexen i origo!
 
@@ -69,48 +71,55 @@ for strand in range(rows):
 
     N = 20
 
-    nurbs.points.add(N)
+    if strand == 0:
+        nurbs.points.add(N - 1)
+    else:
+        nurbs.points.add(N)
+
+    #y = bend_factor * odd(strand)
 
     for n in range(N):
         count += 1
-        y = bend_factor * (odd(strand) * odd(n))
-        if odd(strand) == 1:
-            x -= d_x
-        else:
-            x += d_x
+        #y = bend_factor * (odd(strand) * odd(n))
+        y *= -1
+
+        if not (n == 0):
+            if odd(strand) == 1:
+                x -= d_x
+            else:
+                x += d_x
 
         nurbs.points[count].co = (x, y, z, weight)
 
-    ## Slutsnurren
-    #nurbs.points.add(6)
+    # Slutsnurren
+    nurbs.points.add(6)
 
-    #x -= odd(strand) * d_x
-    #z += (bevel_depth * 2) / 3
-    #nurbs.points[count + 1].co = (x, y, z, weight)
+    x -= odd(strand) * d_x * 0.5
+    nurbs.points[count + 1].co = (x, y, z, weight)
 
-    #y *= -1
-    #z += (bevel_depth * 2) / 3
-    #nurbs.points[count + 2].co = (x, y, z, weight)
+    y *= -1
+    nurbs.points[count + 2].co = (x, y, z, weight)
 
-    #x += odd(strand) * d_x
-    #z += (bevel_depth * 2) / 3
-    #nurbs.points[count + 3].co = (x, y, z, weight)
+    x += odd(strand) * d_x * 0.5
+    z += (bevel_depth)
+    nurbs.points[count + 3].co = (x, y, z, weight)
 
-    #y *= -1
-    #z += (bevel_depth * 2) / 3
-    #nurbs.points[count + 4].co = (x, y, z, weight)
+    y *= -1
+    z += (bevel_depth)
+    nurbs.points[count + 4].co = (x, y, z, weight)
 
-    #x -= odd(strand) * d_x
-    #z += (bevel_depth * 2) / 3
-    #nurbs.points[count + 5].co = (x, y, z, weight)
+    x -= odd(strand) * d_x * 0.5
+    nurbs.points[count + 5].co = (x, y, z, weight)
 
-    #y *= -1
-    #z += (bevel_depth * 2) / 3
-    #nurbs.points[count + 6].co = (x, y, z, weight)
+    y *= -1
+    nurbs.points[count + 6].co = (x, y, z, weight)
 
-    #count += 6
+    count += 6
 
-    #x += odd(strand) * d_x
+    x += odd(strand) * d_x * 0.5
+    y *= -1
+
+    #z += bevel_depth * 4
 
 
 
@@ -118,51 +127,51 @@ for strand in range(rows):
 #vert_texture.use_flip_axis = False
 #material.texture_slots[0] = vert_texture
 # nåt dumt jag gjort i .blend filenNone
-#vertical_strands = [None, None]
+vertical_strands = [None, None]
 
-#for n in range(2, N-1):
-    #vert = D.curves.new(name='vert_strand' + str(n), type='CURVE')
+for n in range(2, N-1):
+    vert = D.curves.new(name='vert_strand' + str(n), type='CURVE')
 
-    #vert.dimensions = '3D'
-    #vert.fill_mode = 'FULL'
-    #vert.bevel_resolution = 5
-    #vert.bevel_depth = bevel_depth * vert_bevel_factor * (1.15 - random()*0.3)
-    #vert.use_uv_as_generated = True
+    vert.dimensions = '3D'
+    vert.fill_mode = 'FULL'
+    vert.bevel_resolution = 5
+    vert.bevel_depth = bevel_depth * vert_bevel_factor * (1.15 - random()*0.3)
+    vert.use_uv_as_generated = True
 
 
-    #vertical_strands.append(D.objects.new('vert_strandObj' + str(n), vert))
-    #C.scene.objects.link(vertical_strands[n])
+    vertical_strands.append(D.objects.new('vert_strandObj' + str(n), vert))
+    C.scene.objects.link(vertical_strands[n])
 
-    #individ_mat = material.copy()
-    #if cycles:
-        #individ_mat.node_tree.nodes["Mapping"].rotation.z = random() * 180
-        #individ_mat.node_tree.nodes["Mapping.001"].rotation.z = random() * 180
-        #individ_mat.node_tree.nodes["Mapping.002"].rotation.z = random() * 180
-        #individ_mat.node_tree.nodes["RGB"].color.r += (random() - 0.5) * 0.1
-        #individ_mat.node_tree.nodes["RGB"].color.g += (random() - 0.5) * 0.1
-        #individ_mat.node_tree.nodes["RGB"].color.b += (random() - 0.5) * 0.1
-    #else:
-        #individ_mat.texture_slots[0].offset.y = random() * 40
+    individ_mat = material.copy()
+    if cycles:
+        individ_mat.node_tree.nodes["Mapping"].rotation.z = random() * 180
+        individ_mat.node_tree.nodes["Mapping.001"].rotation.z = random() * 180
+        individ_mat.node_tree.nodes["Mapping.002"].rotation.z = random() * 180
+        individ_mat.node_tree.nodes["RGB"].color.r += (random() - 0.5) * 0.1
+        individ_mat.node_tree.nodes["RGB"].color.g += (random() - 0.5) * 0.1
+        individ_mat.node_tree.nodes["RGB"].color.b += (random() - 0.5) * 0.1
+    else:
+        individ_mat.texture_slots[0].offset.y = random() * 40
 
-    #vertical_strands[n].data.materials.append(individ_mat)
+    vertical_strands[n].data.materials.append(individ_mat)
 
-    #nurbs = vert.splines.new('NURBS')
+    nurbs = vert.splines.new('NURBS')
 
-    ## finns först här. Använd hela splinen
-    #vert.splines[0].use_endpoint_u = True
+    # finns först här. Använd hela splinen
+    vert.splines[0].use_endpoint_u = True
 
-    #nurbs.points.add(rows-1)
+    nurbs.points.add(rows-1)
 
-    #weight = 0.2
+    weight = 0.2
 
-    #z = 0
+    z = 0
 
-    #for r in range(rows):
-        #x = n/2
-        #y = 0
-        ##z = r/4
-        #z += d_z
-        #nurbs.points[r].co = (x, y, z, weight)
+    for r in range(rows):
+        x = n/2
+        y = 0
+        #z = r/4
+        z += bevel_depth * 2
+        nurbs.points[r].co = (x, y, z, weight)
 
 
 
