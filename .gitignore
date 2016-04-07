@@ -1,5 +1,8 @@
-# Ignore tje out folder
+# Ignore the out folder
 /out/*
+
+# Random blender-files Don't know what they are for.
+*.blend1
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
