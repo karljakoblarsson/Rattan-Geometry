@@ -8,6 +8,7 @@ from math import *
 from random import *
 
 #### TODO
+# - Fixa ordentligt UV in [0,1]
 # - Take input
 # - And settings
 # - Group veert_strands somehow
@@ -24,8 +25,6 @@ def odd(n):
 ##############################################################################
 
 def create_rattan(transform):
-    curvesObj = []
-
     # """"""Trä""""" Material definerat i .blend-filen. (Ett '"' var inte nog)
     material = D.materials.get('YR-Material')
     texture = D.textures.get('Bamboo-tex')
@@ -57,10 +56,10 @@ def create_rattan(transform):
 
     curve_settings(curve)
 
-    curvesObj.append(D.objects.new('CurveObj', curve))
-    C.scene.objects.link(curvesObj[0])
+    curvesObj = D.objects.new('CurveObj', curve)
+    C.scene.objects.link(curvesObj)
 
-    curvesObj[0].data.materials.append(material)
+    curvesObj.data.materials.append(material)
 
     nurbs = curve.splines.new('NURBS')
 
@@ -70,8 +69,8 @@ def create_rattan(transform):
     z = 0 # z_0
 
     def set_point(count, vector):
-        (xo, yo, zo) = vector = vector
-        (xn, yn, zn) = transform(xo, yo, zo)
+        (xn, yn, zn) = transform(Vector(vector))
+        #print(str(count) + ": " + str(vector) + " => " + str((xn,yn,zn)))
         nurbs.points[count].co = (xn, yn, zn, weight)
 
 
@@ -183,20 +182,26 @@ def create_rattan(transform):
             #z += bevel_depth * 2
             #nurbs.points[r].co = (x, y, z, weight)
 
+    curvesObj.select = True
+    bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+
 
 
 class RattanOperator(bpy.types.Operator):
     bl_idname = "object.rattan"
     bl_label = "Create Rattan Operator"
 
+    #my_height = bpy.props.IntProperty(name="Height")
+
     def execute(self, context):
         print("Create Rattan")
 
         obj = C.selected_objects[0]
-        def trans(x, y, z):
-            xn = x + obj.location.x
-            yn = y + obj.location.y
-            zn = z + obj.location.z
+        d_vec = obj.location
+        mat_trans = Matrix.Translation(d_vec)
+
+        def trans(vector):
+            (xn, yn, zn) = mat_trans * vector
             return (xn, yn, zn)
 
         bpy.ops.object.delete()
@@ -215,9 +220,10 @@ class RattanPanel(bpy.types.Panel):
     bl_region_type = 'TOOLS'
 
     def draw(self, context):
-        self.layout.label(text="Hello World")
+        #self.layout.label(text="Hello World")
         self.layout.label(text="This is rad!")
-        self.layout.operator("object.rattan", text="Create Rattan",icon="PLUS")
+        #self.layout.prop(bpy.ops.object.rattan, "my_height")
+        self.layout.operator("object.rattan", text="Create Rattan", icon="PLUS")
 
 bpy.utils.register_class(RattanPanel)
 
