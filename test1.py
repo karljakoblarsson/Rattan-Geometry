@@ -24,21 +24,21 @@ def odd(n):
 
 ##############################################################################
 
-def create_rattan(transform):
+def create_rattan(transform, rows=60, N=20):
     # """"""Trä""""" Material definerat i .blend-filen. (Ett '"' var inte nog)
     material = D.materials.get('YR-Material')
     texture = D.textures.get('Bamboo-tex')
 
     # Konstanta parametrar
-    rows = 60
     weight = 0.2
 
-    d_x = 0.5
+    d_x = 1/N
     d_y = 0.15
     bend_factor = d_y
-    d_z = 0.08
+    d_z = 1/rows
 
     bevel_depth = 0.03
+
     vert_bevel_factor = 1.25
 
 
@@ -70,15 +70,12 @@ def create_rattan(transform):
 
     def set_point(count, vector):
         (xn, yn, zn) = transform(Vector(vector))
-        #print(str(count) + ": " + str(vector) + " => " + str((xn,yn,zn)))
         nurbs.points[count].co = (xn, yn, zn, weight)
 
 
     # Glöm inte default vertexen i origo!
 
     for strand in range(rows):
-
-        N = 20
 
         if strand == 0:
             nurbs.points.add(N - 1)
@@ -110,11 +107,11 @@ def create_rattan(transform):
         set_point(count + 2, (x, y, z))
 
         x += odd(strand) * d_x * 0.5
-        z += (bevel_depth)
+        z += (d_z)
         set_point(count + 3, (x, y, z))
 
         y *= -1
-        z += (bevel_depth)
+        z += (d_z)
         set_point(count + 4, (x, y, z))
 
         x -= odd(strand) * d_x * 0.5
@@ -127,9 +124,6 @@ def create_rattan(transform):
 
         x += odd(strand) * d_x * 0.5
         y *= -1
-
-        #z += bevel_depth * 4
-
 
 
     #vert_texture = D.textures['Bamboo-tex'].copy()
@@ -198,14 +192,26 @@ class RattanOperator(bpy.types.Operator):
 
         obj = C.selected_objects[0]
         d_vec = obj.location
+
+        mat_init_trans = Matrix.Translation(Vector((-0.5,0,-1.0)))
         mat_trans = Matrix.Translation(d_vec)
 
+        (xs, ys, zs) = obj.scale
+
+        # Eeeh, it works. But probably needs to be more robust.
+        mat_scale_u = Matrix.Scale(xs*2, 4, (1.0, 0.0, 0.0))
+        mat_scale_v = Matrix.Scale(zs, 4, (0.0, 0.0, 1.0))
+        mat_scale_w = Matrix.Scale(ys*2, 4, (0.0, 1.0, 0.0))
+
+        mat_scale = mat_scale_u * mat_scale_v * mat_scale_w
+
         def trans(vector):
-            (xn, yn, zn) = mat_trans * vector
+            (xn, yn, zn) = mat_trans * mat_scale * mat_init_trans * vector
             return (xn, yn, zn)
 
-        bpy.ops.object.delete()
-        create_rattan(trans)
+        #bpy.ops.object.delete()
+        obj.select = False
+        create_rattan(trans, 80, 30)
         return {'FINISHED'}
 
 bpy.utils.register_class(RattanOperator)
