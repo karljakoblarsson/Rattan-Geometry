@@ -27,7 +27,6 @@ def odd(n):
 def create_rattan(transform, rows=60, N=20):
     # """"""Trä""""" Material definerat i .blend-filen. (Ett '"' var inte nog)
     material = D.materials.get('YR-Material')
-    texture = D.textures.get('Bamboo-tex')
 
     # Konstanta parametrar
     weight = 0.2
@@ -41,25 +40,27 @@ def create_rattan(transform, rows=60, N=20):
 
     vert_bevel_factor = 1.25
 
+    rattan_obj = D.objects.new('Rattan', None)
+    C.scene.objects.link(rattan_obj)
 
-    cycles = False
 
-    def curve_settings(c):
+    def curve_settings(c, depth = bevel_depth):
         c.dimensions = '3D'
         c.fill_mode = 'FULL'
         c.bevel_resolution = 5
         c.use_uv_as_generated = True
-        c.bevel_depth = bevel_depth
+        c.bevel_depth = depth
 
 
-    curve = D.curves.new(name='strand', type='CURVE')
+    curve = D.curves.new(name='Wrap', type='CURVE')
 
     curve_settings(curve)
 
-    curvesObj = D.objects.new('CurveObj', curve)
-    C.scene.objects.link(curvesObj)
+    curves_obj = D.objects.new('Wrap', curve)
+    curves_obj.parent = rattan_obj
+    C.scene.objects.link(curves_obj)
 
-    curvesObj.data.materials.append(material)
+    curves_obj.data.materials.append(material)
 
     nurbs = curve.splines.new('NURBS')
 
@@ -69,8 +70,9 @@ def create_rattan(transform, rows=60, N=20):
     z = 0 # z_0
 
     def set_point(count, vector):
-        (xn, yn, zn) = transform(Vector(vector))
-        nurbs.points[count].co = (xn, yn, zn, weight)
+        point = Vector((0,0,0,weight))
+        point.xyz = transform(Vector(vector))
+        nurbs.points[count].co = point
 
 
     # Glöm inte default vertexen i origo!
@@ -126,57 +128,42 @@ def create_rattan(transform, rows=60, N=20):
         y *= -1
 
 
-    #vert_texture = D.textures['Bamboo-tex'].copy()
-    #vert_texture.use_flip_axis = False
-    #material.texture_slots[0] = vert_texture
-    # nåt dumt jag gjort i .blend filenNone
-    #vertical_strands = [None, None]
+    weight = 0.2
 
-    #for n in range(2, N-1):
-        #vert = D.curves.new(name='vert_strand' + str(n), type='CURVE')
+    def set_vert_point(spline, count, vector):
+        point = Vector((0, 0, 0, weight))
+        point.xyz = transform(Vector(vector))
+        spline.points[count].co = point
 
-        #vert.dimensions = '3D'
-        #vert.fill_mode = 'FULL'
-        #vert.bevel_resolution = 5
-        #vert.bevel_depth = bevel_depth * vert_bevel_factor * (1.15 - random()*0.3)
-        #vert.use_uv_as_generated = True
+    verticals = D.curves.new(name='Weft', type='CURVE')
+
+    curve_settings(verticals, bevel_depth * vert_bevel_factor)
+
+    vertical_strands = (D.objects.new('Weft', verticals))
+    vertical_strands.data.materials.append(material)
+
+    vertical_strands.parent = rattan_obj
+    C.scene.objects.link(vertical_strands)
+
+    x = 0
+    y = 0
+
+    for n in range(0, N-2):
+        nurbs = verticals.splines.new('NURBS')
+
+        nurbs.use_endpoint_u = True
+
+        nurbs.points.add(rows-1)
+
+        x += d_x
+        z = 0
+
+        for r in range(rows):
+            z += d_z * 2
+            set_vert_point(nurbs, r, (x, y, z))
 
 
-        #vertical_strands.append(D.objects.new('vert_strandObj' + str(n), vert))
-        #C.scene.objects.link(vertical_strands[n])
-
-        #individ_mat = material.copy()
-        #if cycles:
-            #individ_mat.node_tree.nodes["Mapping"].rotation.z = random() * 180
-            #individ_mat.node_tree.nodes["Mapping.001"].rotation.z = random() * 180
-            #individ_mat.node_tree.nodes["Mapping.002"].rotation.z = random() * 180
-            #individ_mat.node_tree.nodes["RGB"].color.r += (random() - 0.5) * 0.1
-            #individ_mat.node_tree.nodes["RGB"].color.g += (random() - 0.5) * 0.1
-            #individ_mat.node_tree.nodes["RGB"].color.b += (random() - 0.5) * 0.1
-        #else:
-            #individ_mat.texture_slots[0].offset.y = random() * 40
-
-        #vertical_strands[n].data.materials.append(individ_mat)
-
-        #nurbs = vert.splines.new('NURBS')
-
-        ## finns först här. Använd hela splinen
-        #vert.splines[0].use_endpoint_u = True
-
-        #nurbs.points.add(rows-1)
-
-        #weight = 0.2
-
-        #z = 0
-
-        #for r in range(rows):
-            #x = n/2
-            #y = 0
-            ##z = r/4
-            #z += bevel_depth * 2
-            #nurbs.points[r].co = (x, y, z, weight)
-
-    curvesObj.select = True
+    curves_obj.select = True
     bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
 
 
@@ -201,13 +188,12 @@ class RattanOperator(bpy.types.Operator):
         # Eeeh, it works. But probably needs to be more robust.
         mat_scale_u = Matrix.Scale(xs*2, 4, (1.0, 0.0, 0.0))
         mat_scale_v = Matrix.Scale(zs, 4, (0.0, 0.0, 1.0))
-        mat_scale_w = Matrix.Scale(ys*2, 4, (0.0, 1.0, 0.0))
+        mat_scale_w = Matrix.Scale(1.0, 4, (0.0, 1.0, 0.0))
 
         mat_scale = mat_scale_u * mat_scale_v * mat_scale_w
 
         def trans(vector):
-            (xn, yn, zn) = mat_trans * mat_scale * mat_init_trans * vector
-            return (xn, yn, zn)
+            return mat_trans * mat_scale * mat_init_trans * vector
 
         #bpy.ops.object.delete()
         obj.select = False
