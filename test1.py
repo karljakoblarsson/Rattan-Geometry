@@ -194,7 +194,7 @@ class RattanOperator(bpy.types.Operator):
             return mat_trans * mat_scale * mat_init_trans * vector
 
         obj.select = False
-        create_rattan(trans, 80, 30)
+        create_rattan(trans, C.scene.rattan_rows, C.scene.rattan_cols)
         return {'FINISHED'}
 
 bpy.utils.register_class(RattanOperator)
@@ -208,11 +208,22 @@ class RattanPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
 
+    bpy.types.Scene.rattan_rows = bpy.props.IntProperty(name = "Rows")
+    bpy.types.Scene.rattan_cols = bpy.props.IntProperty(name = "Cols")
+
+
     def draw(self, context):
+        print(dir(context))
         #self.layout.label(text="Hello World")
         self.layout.label(text="This is rad!")
         #self.layout.prop(bpy.ops.object.rattan, "my_height")
+        self.layout.prop(context.scene, "rattan_rows")
+        self.layout.prop(context.scene, "rattan_cols")
         self.layout.operator("object.rattan", text="Create Rattan", icon="PLUS")
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
 
 bpy.utils.register_class(RattanPanel)
 
