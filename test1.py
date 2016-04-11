@@ -1,5 +1,5 @@
-# Hej! Den här koden är skit. Den är bara ihopslängd för att testa hur blender
-# funkar. Klaga inte på att den är sämst, jag vet det redan. :P
+# Hej! Den här koden är int lika skit aom tidigare. Men kanske inte bra.
+# Klaga inte på att den är sämst, jag vet det redan. :P
 
 import bpy
 import os, sys
@@ -8,10 +8,8 @@ from math import *
 from random import *
 
 #### TODO
-# - Fixa ordentligt UV in [0,1]
-# - Take input
-# - And settings
-# - Group veert_strands somehow
+# - Take panel settings
+# - Fix bevel_depth based on height
 # - Kontakta ICOM
 # - Weaving
 
@@ -33,7 +31,6 @@ def create_rattan(transform, rows=60, N=20):
 
     d_x = 1/N
     d_y = 0.15
-    bend_factor = d_y
     d_z = 1/rows
 
     bevel_depth = 0.03
@@ -66,7 +63,7 @@ def create_rattan(transform, rows=60, N=20):
 
     count = -1
     x = 0
-    y = bend_factor
+    y = d_y
     z = 0 # z_0
 
     def set_point(count, vector):
@@ -178,14 +175,15 @@ class RattanOperator(bpy.types.Operator):
         print("Create Rattan")
 
         obj = C.selected_objects[0]
-        d_vec = obj.location
+        location = obj.location
 
+        # Transform so the center is in the origin
         mat_init_trans = Matrix.Translation(Vector((-0.5,0,-1.0)))
-        mat_trans = Matrix.Translation(d_vec)
+        # Translate according to input
+        mat_trans = Matrix.Translation(location)
 
         (xs, ys, zs) = obj.scale
 
-        # Eeeh, it works. But probably needs to be more robust.
         mat_scale_u = Matrix.Scale(xs*2, 4, (1.0, 0.0, 0.0))
         mat_scale_v = Matrix.Scale(zs, 4, (0.0, 0.0, 1.0))
         mat_scale_w = Matrix.Scale(1.0, 4, (0.0, 1.0, 0.0))
@@ -195,7 +193,6 @@ class RattanOperator(bpy.types.Operator):
         def trans(vector):
             return mat_trans * mat_scale * mat_init_trans * vector
 
-        #bpy.ops.object.delete()
         obj.select = False
         create_rattan(trans, 80, 30)
         return {'FINISHED'}
