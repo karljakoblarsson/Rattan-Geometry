@@ -193,6 +193,8 @@ class RattanOperator(bpy.types.Operator):
         mat_scale = mat_scale_u * mat_scale_v * mat_scale_w
 
         def trans(vector):
+            # Non-linear (qaudric in this case) transformi the xz-plane
+            vector.y = vector.y + pow((vector.x * 4 - 2), 2) + pow((vector.z * 2 - 1), 2)
             return mat_trans * mat_scale * mat_init_trans * vector
 
         #bpy.ops.object.delete()
