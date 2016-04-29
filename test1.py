@@ -8,8 +8,8 @@ from math import *
 from random import *
 
 #### TODO
-# - Take panel settings
-# - Fix bevel_depth based on height
+# - Take panel settings - Sort of done
+# - Fix bevel_depth based on height, or the other way around
 # - Kontakta ICOM
 # - Weaving
 
@@ -22,20 +22,16 @@ def odd(n):
 
 ##############################################################################
 
-def create_rattan(transform, rows=60, N=20):
-    # """"""Trä""""" Material definerat i .blend-filen. (Ett '"' var inte nog)
-    material = D.materials.get('YR-Material')
-
+def create_rattan(transform, rows=60, N=20, bevel_depth = 0.03):
     # Konstanta parametrar
     weight = 0.2
 
     d_x = 1/N
-    d_y = 0.15
+    d_y = 6.0 * bevel_depth
     d_z = 1/rows
 
-    bevel_depth = 0.03
 
-    vert_bevel_factor = 1.25
+    vert_bevel_factor = 1.05
 
     rattan_obj = D.objects.new('Rattan', None)
     C.scene.objects.link(rattan_obj)
@@ -57,22 +53,17 @@ def create_rattan(transform, rows=60, N=20):
     curves_obj.parent = rattan_obj
     C.scene.objects.link(curves_obj)
 
-    curves_obj.data.materials.append(material)
-
     nurbs = curve.splines.new('NURBS')
 
     count = -1
     x = 0
     y = d_y
-    z = 0 # z_0
+    z = 0
 
     def set_point(count, vector):
         point = Vector((0,0,0,weight))
         point.xyz = transform(Vector(vector))
         nurbs.points[count].co = point
-
-
-    # Glöm inte default vertexen i origo!
 
     for strand in range(rows):
 
@@ -81,11 +72,8 @@ def create_rattan(transform, rows=60, N=20):
         else:
             nurbs.points.add(N)
 
-        #y = bend_factor * odd(strand)
-
         for n in range(N):
             count += 1
-            #y = bend_factor * (odd(strand) * odd(n))
             y *= -1
 
             if not (n == 0):
@@ -97,6 +85,7 @@ def create_rattan(transform, rows=60, N=20):
             set_point(count, (x, y, z))
 
         # Slutsnurren
+        # Det här borde vi kanske gör annorlunda
         nurbs.points.add(6)
 
         x -= odd(strand) * d_x * 0.5
@@ -137,7 +126,6 @@ def create_rattan(transform, rows=60, N=20):
     curve_settings(verticals, bevel_depth * vert_bevel_factor)
 
     vertical_strands = (D.objects.new('Weft', verticals))
-    vertical_strands.data.materials.append(material)
 
     vertical_strands.parent = rattan_obj
     C.scene.objects.link(vertical_strands)
@@ -169,8 +157,6 @@ class RattanOperator(bpy.types.Operator):
     bl_idname = "object.rattan"
     bl_label = "Create Rattan Operator"
 
-    #my_height = bpy.props.IntProperty(name="Height")
-
     def execute(self, context):
         print("Create Rattan")
 
@@ -194,7 +180,8 @@ class RattanOperator(bpy.types.Operator):
             return mat_trans * mat_scale * mat_init_trans * vector
 
         obj.select = False
-        create_rattan(trans, C.scene.rattan_rows, C.scene.rattan_cols)
+        create_rattan(trans, C.scene.rattan_rows, C.scene.rattan_cols,
+                C.scene.rattan_bevel_depth)
         return {'FINISHED'}
 
 bpy.utils.register_class(RattanOperator)
@@ -202,23 +189,25 @@ bpy.utils.register_class(RattanOperator)
 
 class RattanPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_hello_world"
-    bl_label = "Tjabba!"
+    bl_label = "Rattan generator"
     bl_category = "Tools"
     bl_context = "objectmode"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
 
-    bpy.types.Scene.rattan_rows = bpy.props.IntProperty(name = "Rows")
-    bpy.types.Scene.rattan_cols = bpy.props.IntProperty(name = "Cols")
+    bpy.types.Scene.rattan_rows = bpy.props.IntProperty(name = "Rows",
+            default = 40)
+    bpy.types.Scene.rattan_cols = bpy.props.IntProperty(name = "Cols",
+            default = 20)
+    bpy.types.Scene.rattan_bevel_depth = bpy.props.FloatProperty(
+            name = "Bevel depth", default = 0.03)
 
 
     def draw(self, context):
         print(dir(context))
-        #self.layout.label(text="Hello World")
-        self.layout.label(text="This is rad!")
-        #self.layout.prop(bpy.ops.object.rattan, "my_height")
         self.layout.prop(context.scene, "rattan_rows")
         self.layout.prop(context.scene, "rattan_cols")
+        self.layout.prop(context.scene, "rattan_bevel_depth")
         self.layout.operator("object.rattan", text="Create Rattan", icon="PLUS")
 
     def invoke(self, context, event):

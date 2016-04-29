@@ -1,7 +1,7 @@
 # Simple makefile to run blender with our testfile and script
 #
 
-FILE=dev5.blend
+FILE=dev6.blend
 
 OUTFOLDER=out/
 OUT=rattan.png
