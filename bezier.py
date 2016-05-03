@@ -12,7 +12,7 @@ def cubic_bezier(t):
 
 def plot():
 
-    t = list(numpy.linspace(0.4,1,100))
+    t = list(numpy.linspace(0,2,100))
 
     res = list(map(cubic_bezier, t))
 

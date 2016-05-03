@@ -1,5 +1,4 @@
-# Hej! Den här koden är int lika skit aom tidigare. Men kanske inte bra.
-# Klaga inte på att den är sämst, jag vet det redan. :P
+# Hej! Den här koden är int lika skit som tidigare. Men kanske inte bra.
 
 import bpy
 import os, sys
@@ -11,6 +10,7 @@ from random import *
 # - Take panel settings - Sort of done
 # - Fix bevel_depth based on height, or the other way around
 # - Kontakta ICOM
+
 # - Weaving
 
 # Convenience Variables:
@@ -28,7 +28,8 @@ def create_rattan(transform, rows=60, N=20, bevel_depth = 0.03):
 
     d_x = 1/N
     d_y = 6.0 * bevel_depth
-    d_z = 1/rows
+    # For some reason z went from 0 to 2. Ugly fix.
+    d_z = 0.5/rows
 
 
     vert_bevel_factor = 1.05
@@ -160,24 +161,44 @@ class RattanOperator(bpy.types.Operator):
     def execute(self, context):
         print("Create Rattan")
 
+        # Ugly hardcoded code. But it works somewhat and can create okay
+        # results. There is something funky going on with the transform still
+        # but it can probably be faked.
+
         obj = C.selected_objects[0]
-        location = obj.location
+        obj2 = C.selected_objects[1]
 
-        # Transform so the center is in the origin
-        mat_init_trans = Matrix.Translation(Vector((-0.5,0,-1.0)))
-        # Translate according to input
-        mat_trans = Matrix.Translation(location)
+        mat_object = obj.matrix_world
 
-        (xs, ys, zs) = obj.scale
+        curve = obj.data.splines[0]
+        curve2 = obj2.data.splines[0]
 
-        mat_scale_u = Matrix.Scale(xs*2, 4, (1.0, 0.0, 0.0))
-        mat_scale_v = Matrix.Scale(zs, 4, (0.0, 0.0, 1.0))
-        mat_scale_w = Matrix.Scale(1.0, 4, (0.0, 1.0, 0.0))
+        a = curve.bezier_points[0]
+        b = curve.bezier_points[1]
 
-        mat_scale = mat_scale_u * mat_scale_v * mat_scale_w
+        a2 = curve2.bezier_points[0]
+        b2 = curve2.bezier_points[1]
+
+        points = [a.co, a.handle_right, b.handle_left, b.co]
+        points2 = [a2.co, a2.handle_right, b2.handle_left, b2.co]
+
+        def cubic_bezier(t, P):
+            if (t > 1):
+                print("t: " + str(t))
+            return ( pow((1-t),3) * P[0]
+                   + 3 * pow((1-t),2) * t * P[1]
+                   + 3 * (1-t) * pow(t,2) * P[2]
+                   + pow(t,3) * P[3] )
 
         def trans(vector):
-            return mat_trans * mat_scale * mat_init_trans * vector
+            # trans = cubic_bezier(vector.x, points)
+            trans = cubic_bezier(vector.z, points)
+            mat_bezier = Matrix.Translation(trans)
+
+            transV = cubic_bezier(vector.x, points2)
+            mat_bezier *= Matrix.Translation(transV)
+            # return mat_trans * mat_scale * mat_init_trans * mat_bezier * vector
+            return mat_object * mat_bezier * vector
 
         obj.select = False
         create_rattan(trans, C.scene.rattan_rows, C.scene.rattan_cols,
@@ -204,7 +225,6 @@ class RattanPanel(bpy.types.Panel):
 
 
     def draw(self, context):
-        print(dir(context))
         self.layout.prop(context.scene, "rattan_rows")
         self.layout.prop(context.scene, "rattan_cols")
         self.layout.prop(context.scene, "rattan_bevel_depth")
