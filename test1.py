@@ -20,6 +20,31 @@ D = bpy.data
 def odd(n):
     return (2*(n%2)) - 1
 
+def cubic_bezier(t, P):
+    if (t > 1):
+        print("t: " + str(t))
+    return ( pow((1-t),3) * P[0]
+           + 3 * pow((1-t),2) * t * P[1]
+           + 3 * (1-t) * pow(t,2) * P[2]
+           + pow(t,3) * P[3] )
+
+def bezier_length(P, steps):
+    def euclid(A, B):
+        C = A - B
+        return C.length
+
+    linspace = []
+    for i in range(steps + 1):
+        linspace.append(i/steps)
+
+    points = [cubic_bezier(x, P) for x in linspace]
+
+    length = 0
+    for i in range(steps):
+        length += euclid(points[i], points[i+1])
+
+    return length
+
 ##############################################################################
 
 def create_rattan(transform, rows=60, N=20, bevel_depth = 0.03):
@@ -31,6 +56,7 @@ def create_rattan(transform, rows=60, N=20, bevel_depth = 0.03):
     # For some reason z went from 0 to 2. Ugly fix.
     d_z = 0.5/rows
 
+    turn_x = d_y * 2
 
     vert_bevel_factor = 1.05
 
@@ -182,14 +208,6 @@ class RattanOperator(bpy.types.Operator):
         points = [a.co, a.handle_right, b.handle_left, b.co]
         points2 = [a2.co, a2.handle_right, b2.handle_left, b2.co]
 
-        def cubic_bezier(t, P):
-            if (t > 1):
-                print("t: " + str(t))
-            return ( pow((1-t),3) * P[0]
-                   + 3 * pow((1-t),2) * t * P[1]
-                   + 3 * (1-t) * pow(t,2) * P[2]
-                   + pow(t,3) * P[3] )
-
         def trans(vector):
             # trans = cubic_bezier(vector.x, points)
             trans = cubic_bezier(vector.z, points)
@@ -201,8 +219,18 @@ class RattanOperator(bpy.types.Operator):
             return mat_object * mat_bezier * vector
 
         obj.select = False
-        create_rattan(trans, C.scene.rattan_rows, C.scene.rattan_cols,
-                C.scene.rattan_bevel_depth)
+
+        # Determine number of strands.
+        rows = int(bezier_length(points, 100) / (2.5
+            * C.scene.rattan_bevel_depth))
+        # Hello magic constants!
+        cols = int(bezier_length(points2, 100) / (8
+            * C.scene.rattan_bevel_depth))
+        print(bezier_length(points2, 100))
+
+        print("rows: " + str(rows) + "   cols: " + str(cols))
+
+        create_rattan(trans, rows, cols, C.scene.rattan_bevel_depth)
         return {'FINISHED'}
 
 bpy.utils.register_class(RattanOperator)
